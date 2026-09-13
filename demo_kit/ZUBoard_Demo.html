@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>ZUBoard 1CG UART 展示套件</title>
+<style>
+  :root {
+    --avnet-green: #3DAE2B;
+    --avnet-green-dark: #2c8a1f;
+    --bg: #f4f6f5;
+    --card-bg: #ffffff;
+    --ink: #1c2521;
+    --muted: #5b6b64;
+    --border: #dde5e1;
+    --term-bg: #0c1410;
+    --term-text: #56f27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+  header h1 span { color: var(--avnet-green); }
+  .badge {
+    background: var(--avnet-green);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 1.05rem;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-num {
+    background: var(--avnet-green);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .card p, .card li { color: var(--ink); line-height: 1.7; font-size: 0.95rem; }
+  .card ul, .card ol { margin: 0; padding-left: 20px; }
+  code, .kbd {
+    background: #eef3f0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: Consolas, monospace;
+    font-size: 0.88em;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 8px;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+  .btn {
+    appearance: none;
+    border: none;
+    background: var(--avnet-green);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--avnet-green-dark); }
+  .btn:disabled { background: #a9b8b1; cursor: not-allowed; }
+  .btn.secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover { background: #eef3f0; }
+  .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #c94b3f; display: inline-block;
+  }
+  .dot.on { background: var(--avnet-green); }
+  #term {
+    background: var(--term-bg);
+    color: var(--term-text);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.95rem;
+    padding: 16px;
+    border-radius: 8px;
+    height: 260px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  #term .line.hello { color: #ffe27a; font-weight: 700; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 24px; }
+  .diagram-box {
+    background: #fbfdfc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+  .diagram-box svg { width: 100%; height: auto; min-width: 640px; display: block; }
+  .info-badge {
+    background: #eef6ee;
+    color: var(--avnet-green-dark);
+    border: 1px solid var(--avnet-green);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  table.techtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  table.techtable th, table.techtable td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.techtable th {
+    width: 30%;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  table.techtable tr:last-child th, table.techtable tr:last-child td { border-bottom: none; }
+  .not-supported {
+    background: #fff4e5; border: 1px solid #f0c988; color: #7a4d00;
+    padding: 12px 16px; border-radius: 8px; font-size: 0.9rem; display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>ZUBoard 1CG <span>UART</span> 現場展示套件</h1>
+    <span class="badge">Avnet ZUBoard 1CG</span>
+  </header>
+
+  <div class="card">
+    <h2><span class="step-num">1</span> 硬體準備(每次重新供電後需確認)</h2>
+    <ul>
+      <li>BOOT MODE 撥動開關 <b>SW2</b> 設定為 <b>JTAG 模式</b>:<code>ON-ON-ON-ON</code></li>
+      <li>micro-USB 傳輸線接上 ZUBoard 的 <b>J16</b>(JTAG/UART)並連接到電腦</li>
+      <li>USB-C 15V 電源接上 <b>J15</b></li>
+      <li>按下電源鈕 <b>SW7</b> 開機,確認 <b>D23 綠色 LED</b> 亮起</li>
+    </ul>
+    <p class="hint">此時 User RGB LED <b>D4</b>、<b>D5</b> 應為熄滅(尚未燒錄任何邏輯)——這正是「燒錄前」的狀態,可先讓客戶觀察一次做對比。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">2</span> 燒錄並執行展示程式</h2>
+    <p>雙擊資料夾中的 <code>1_Program_And_Run.bat</code>。</p>
+    <p class="hint">此腳本會自動透過 JTAG 燒錄位元流(bitstream)並啟動應用程式,約需 10~20 秒,終端機視窗顯示 <code>APP_RUNNING</code> 即代表成功。<br>
+    <b>燒錄完成的瞬間,D4、D5 會立即開始以約 1 秒的頻率交互閃爍(此為 PL 硬體邏輯自動運作,與軟體無關)</b>——不需要任何額外說明,客戶用肉眼就能立刻分辨「燒錄前 / 燒錄後」的差異。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span> 即時顯示 UART 輸出(本頁面)</h2>
+    <div class="not-supported" id="notSupported">
+      您目前使用的瀏覽器不支援 Web Serial API。請改用 <b>Microsoft Edge</b> 或 <b>Google Chrome</b>(Windows 內建的 Edge 即可,不需額外安裝)。
+    </div>
+    <div class="status-row">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">尚未連線</span>
+      <button class="btn" id="connectBtn">連線至 ZUBoard(選擇序列埠)</button>
+      <button class="btn secondary" id="clearBtn">清除畫面</button>
+    </div>
+    <div id="term">等待連線... 按下「連線至 ZUBoard」後,於彈出視窗中選擇對應的序列埠(通常只會列出一個選項)。</div>
+    <p class="hint">連線設定:115200 baud、8 資料位元、無同位、1 停止位元(與程式內建設定一致)。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">4</span> 系統架構方塊圖(本頁面,無需開啟 Vivado)</h2>
+    <p class="hint">下圖即為本範例的系統架構:PS(Processing System)透過 UART0 與電腦通訊,並提供 100MHz 系統時脈給 PL(可程式邏輯)驅動 LED 閃爍電路。</p>
+    <div class="diagram-box">
+      <svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZUBoard 1CG 系統架構方塊圖">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3DAE2B"></path>
+          </marker>
+        </defs>
+
+        <!-- Board outline -->
+        <rect x="10" y="10" width="840" height="380" rx="16" fill="none" stroke="#b9c6bf" stroke-width="2" stroke-dasharray="6 5"></rect>
+        <text x="26" y="34" font-size="13" fill="#5b6b64">ZUBoard 1CG</text>
+
+        <!-- MPSoC chip -->
+        <rect x="150" y="55" width="400" height="225" rx="10" fill="#eef6ee" stroke="#3DAE2B" stroke-width="2"></rect>
+        <text x="350" y="46" font-size="14" font-weight="700" fill="#1c2521" text-anchor="middle">AMD Zynq UltraScale+ MPSoC (XCZU1CG)</text>
+
+        <!-- PS block -->
+        <rect x="172" y="85" width="170" height="160" rx="8" fill="#ffffff" stroke="#7fbf70" stroke-width="1.5"></rect>
+        <text x="257" y="108" font-size="13" font-weight="700" text-anchor="middle">PS 處理系統</text>
+        <text x="257" y="132" font-size="11.5" text-anchor="middle">Cortex-A53 #0</text>
+        <text x="257" y="150" font-size="11.5" text-anchor="middle">hello_avnet.elf</text>
+        <rect x="192" y="168" width="130" height="30" rx="6" fill="#eef6ee" stroke="#3DAE2B"></rect>
+        <text x="257" y="188" font-size="11.5" text-anchor="middle" font-weight="600">UART0 (MIO10/11)</text>
+        <text x="257" y="222" font-size="10.5" fill="#5b6b64" text-anchor="middle">115200 / 8-N-1</text>
+
+        <!-- PL block -->
+        <rect x="358" y="85" width="172" height="160" rx="8" fill="#ffffff" stroke="#7fbf70" stroke-width="1.5"></rect>
+        <text x="444" y="108" font-size="13" font-weight="700" text-anchor="middle">PL 可程式邏輯</text>
+        <rect x="378" y="122" width="132" height="46" rx="6" fill="#eef6ee" stroke="#3DAE2B"></rect>
+        <text x="444" y="140" font-size="11.5" text-anchor="middle" font-weight="600">led_blink 模組</text>
+        <text x="444" y="156" font-size="10.5" fill="#5b6b64" text-anchor="middle">計數分頻 → 約 1Hz 交替</text>
+        <text x="444" y="196" font-size="10.5" fill="#5b6b64" text-anchor="middle">pl_clk0 @ 100MHz</text>
+        <text x="444" y="210" font-size="10.5" fill="#5b6b64" text-anchor="middle">pl_resetn0</text>
+
+        <!-- PS -> PL clock arrow -->
+        <line x1="342" y1="140" x2="356" y2="140" stroke="#3DAE2B" stroke-width="2" marker-end="url(#arrow)"></line>
+
+        <!-- UART0 -> J16 connector -->
+        <rect x="620" y="95" width="170" height="46" rx="8" fill="#ffffff" stroke="#3DAE2B" stroke-width="1.5"></rect>
+        <text x="705" y="114" font-size="11.5" text-anchor="middle" font-weight="600">J16 micro-USB</text>
+        <text x="705" y="130" font-size="10.5" fill="#5b6b64" text-anchor="middle">FTDI JTAG + UART</text>
+        <line x1="342" y1="183" x2="618" y2="118" stroke="#3DAE2B" stroke-width="2" marker-end="url(#arrow)"></line>
+
+        <!-- J16 -> PC / browser -->
+        <rect x="620" y="165" width="170" height="56" rx="8" fill="#ffffff" stroke="#3DAE2B" stroke-width="1.5"></rect>
+        <text x="705" y="186" font-size="11.5" text-anchor="middle" font-weight="600">Windows PC</text>
+        <text x="705" y="202" font-size="10.5" fill="#5b6b64" text-anchor="middle">瀏覽器頁面(本頁 步驟3)</text>
+        <text x="705" y="215" font-size="10" fill="#5b6b64" text-anchor="middle">COM6, 115200</text>
+        <line x1="705" y1="141" x2="705" y2="163" stroke="#3DAE2B" stroke-width="2" marker-end="url(#arrow)"></line>
+
+        <!-- PL -> LEDs -->
+        <line x1="410" y1="245" x2="240" y2="322" stroke="#3DAE2B" stroke-width="2" marker-end="url(#arrow)"></line>
+        <line x1="440" y1="245" x2="400" y2="322" stroke="#3DAE2B" stroke-width="2" marker-end="url(#arrow)"></line>
+
+        <!-- LED D4 -->
+        <circle cx="230" cy="340" r="20" fill="#c7f0c0" stroke="#3DAE2B" stroke-width="2"></circle>
+        <text x="230" y="345" font-size="11" text-anchor="middle" font-weight="700">D4</text>
+        <text x="230" y="372" font-size="10.5" fill="#5b6b64" text-anchor="middle">User RGB LED</text>
+
+        <!-- LED D5 -->
+        <circle cx="390" cy="340" r="20" fill="#e6eee3" stroke="#3DAE2B" stroke-width="2"></circle>
+        <text x="390" y="345" font-size="11" text-anchor="middle" font-weight="700">D5</text>
+        <text x="390" y="372" font-size="10.5" fill="#5b6b64" text-anchor="middle">User RGB LED</text>
+        <text x="310" y="392" font-size="10.5" fill="#5b6b64" text-anchor="middle">D4 / D5 交互閃爍,約 1 秒切換一次</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">5</span>(選用)在 Vivado 中開啟互動式 Block Design</h2>
+    <p>若客戶想看實際的 Vivado 工具畫面,可雙擊資料夾中的 <code>2_Open_Block_Design.bat</code>,自動開啟 Vivado 並顯示可縮放、可互動的方塊設計圖。</p>
+    <p class="hint">首次啟動 Vivado 可能需要 30~60 秒,建議提前於客戶到場前先執行一次熱機。此步驟並非必要,上方步驟 4 的圖已足夠說明架構。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="info-badge">i</span> 技術組成(開發工具 / 語言 / 函式庫)</h2>
+    <table class="techtable">
+      <tr><th>目標晶片</th><td>AMD Zynq UltraScale+ MPSoC — XCZU1CG(內含 Arm Cortex-A53 處理系統 PS + FPGA 可程式邏輯 PL)</td></tr>
+      <tr><th>硬體設計工具</th><td>AMD Vivado Design Suite 2026.1 — IP Integrator 建立 PS 方塊設計(system.bd),並以 Verilog 撰寫 LED 閃爍邏輯後整合進同一顆晶片</td></tr>
+      <tr><th>軟體開發工具</th><td>AMD Vitis Unified IDE 2026.1(Python API)— 由硬體匯出檔(.xsa)建立 Standalone 平台與應用程式專案</td></tr>
+      <tr><th>執行環境</th><td>Standalone(裸機,無作業系統),執行於 Cortex-A53 #0</td></tr>
+      <tr><th>程式語言</th><td>C(應用程式邏輯)、Verilog(PL LED 閃爍模組)、Tcl / Python(建置與燒錄自動化腳本)</td></tr>
+      <tr><th>關鍵函式庫 / 驅動</th><td>xuartps(UART 驅動)、xil_printf(標準輸出)、FSBL 與 PMUFW(由 Vitis 平台自動產生的開機元件)</td></tr>
+      <tr><th>燒錄 / 除錯介面</th><td>JTAG,透過板載 FTDI FT2232H 晶片,以 XSDB(Xilinx System Debugger)+ hw_server 執行下載與啟動</td></tr>
+      <tr><th>本網頁技術</th><td>純 HTML5 + CSS3 + JavaScript(Web Serial API)— 不需安裝、不需伺服器,雙擊即可用 Edge / Chrome 開啟</td></tr>
+    </table>
+    <p class="hint">以上皆為 AMD/Xilinx 官方免費工具鏈,元件全數在 Windows 上本機建置與燒錄完成。</p>
+  </div>
+
+  <footer>ZUBoard 1CG &middot; Zynq UltraScale+ XCZU1CG &middot; UART0 @ MIO10/11 &middot; 115200-8-N-1</footer>
+</div>
+
+<script>
+  const connectBtn = document.getElementById('connectBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const term = document.getElementById('term');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const notSupported = document.getElementById('notSupported');
+
+  let port, reader, keepReading = false;
+
+  if (!('serial' in navigator)) {
+    notSupported.style.display = 'block';
+    connectBtn.disabled = true;
+  }
+
+  function appendLine(text) {
+    const div = document.createElement('div');
+    div.className = 'line' + (text.includes('Hi RelaJet') ? ' hello' : '');
+    div.textContent = text;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  function setConnected(isConnected) {
+    statusDot.classList.toggle('on', isConnected);
+    statusText.textContent = isConnected ? '已連線 - 接收中' : '尚未連線';
+    connectBtn.textContent = isConnected ? '中斷連線' : '連線至 ZUBoard(選擇序列埠)';
+  }
+
+  async function connect() {
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' });
+      setConnected(true);
+      term.innerHTML = '';
+      appendLine('[已連線,等待 ZUBoard 傳送資料...]');
+
+      keepReading = true;
+      const textDecoder = new TextDecoderStream();
+      const readableClosed = port.readable.pipeTo(textDecoder.writable);
+      reader = textDecoder.readable.getReader();
+
+      let buffer = '';
+      while (keepReading) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          buffer += value;
+          let idx;
+          while ((idx = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, idx).replace(/\r$/, '');
+            buffer = buffer.slice(idx + 1);
+            if (line.length) appendLine(line);
+          }
+        }
+      }
+    } catch (err) {
+      appendLine('[錯誤] ' + err.message);
+      setConnected(false);
+    }
+  }
+
+  async function disconnect() {
+    keepReading = false;
+    try {
+      if (reader) { await reader.cancel(); reader.releaseLock(); }
+      if (port) { await port.close(); }
+    } catch (e) { /* ignore */ }
+    setConnected(false);
+    appendLine('[已中斷連線]');
+  }
+
+  connectBtn.addEventListener('click', () => {
+    if (statusDot.classList.contains('on')) {
+      disconnect();
+    } else {
+      connect();
+    }
+  });
+
+  clearBtn.addEventListener('click', () => { term.innerHTML = ''; });
+</script>
+</body>
+</html>
