@@ -11,7 +11,7 @@ int main()
     XUartPs_SetBaudRate(&Uart_Ps, 115200);
 
     while (1) {
-        xil_printf("Hi RelaJet! Nice To Meet You.\r\n");
+        xil_printf("Hi AMD Ross, what a wonderful world!\r\n");
         sleep(1);
     }
     return 0;

@@ -12,23 +12,36 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 repo_dir = os.path.normpath(os.path.join(script_dir, ".."))
 
 xsa_path = os.path.join(repo_dir, "prebuilt", "zuboard_uart_led.xsa")
-workspace = os.path.join(script_dir, "vitis_ws")
+workspace = os.path.join(script_dir, "vitis_ws_build")
 
 client = vitis.create_client()
-client.set_workspace(path=workspace)
+try:
+    client.set_workspace(path=workspace)
+except Exception:
+    # Seen on some installs: "cannot recognize the workspace version" even for a
+    # brand-new empty folder. update_workspace() re-initializes the metadata.
+    client.update_workspace(path=workspace)
 
-platform = client.create_platform_component(name="zuboard_platform", hw_design=xsa_path)
-platform.add_domain(name="standalone_psu_cortexa53_0", cpu="psu_cortexa53_0", os="standalone")
+try:
+    platform = client.create_platform_component(name="zuboard_platform", hw_design=xsa_path)
+    platform.add_domain(name="standalone_psu_cortexa53_0", cpu="psu_cortexa53_0", os="standalone")
+except Exception:
+    # Some installs retain component registration across a deleted workspace
+    # folder; reuse the existing component instead of failing.
+    platform = client.get_component(name="zuboard_platform")
 platform.build()
 
 xpfm = os.path.join(workspace, "zuboard_platform", "export", "zuboard_platform", "zuboard_platform.xpfm")
 
-app = client.create_app_component(
-    name="hello_avnet",
-    platform=xpfm,
-    domain="standalone_psu_cortexa53_0",
-    template="empty_application",
-)
+try:
+    app = client.create_app_component(
+        name="hello_avnet",
+        platform=xpfm,
+        domain="standalone_psu_cortexa53_0",
+        template="empty_application",
+    )
+except Exception:
+    pass
 app = client.get_component(name="hello_avnet")
 app.import_files(from_loc=script_dir, files=["helloworld.c"], dest_dir_in_cmp="src")
 app.build()

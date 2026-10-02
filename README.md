@@ -6,6 +6,8 @@
 - 透過 **PL(可程式邏輯)** 自製的計數器邏輯,交互閃爍 User RGB LED **D4 / D5**(約 1 秒切換一次),讓人一眼就能看出「燒錄前 / 燒錄後」的差異
 - 附一頁**免安裝、雙擊即用**的 HTML 展示頁(`demo_kit/ZUBoard_Demo.html`),用 Windows 內建的 Edge 瀏覽器(Web Serial API)即時顯示 UART 輸出,並內嵌系統架構方塊圖與技術組成說明,適合業務/FAE 在客戶現場快速展示
 
+> **⚠️ 已知狀態:** `prebuilt/hello_avnet.elf` 目前對應的訊息字串仍是舊版。`software/helloworld.c` 已經改成新訊息 **"Hi AMD Ross, what a wonderful world!"**,但因為某台建置機器上 Vitis 2026.1 的背景服務(Vitis Server)啟動時會間歇性卡死(成功率低於一成,已排除 workspace 路徑、元件命名、`XILINX_PATH` 環境變數、Windows Defender 等因素),尚未能重新編譯出對應的 `.elf`。等環境問題排除或改在別台機器建置後會補上;在那之前,若直接用 `prebuilt/` 展示,UART 印出的仍會是舊訊息。重新建置方式見下方「若要修改設計並重新建置」。
+
 ## 硬體需求
 
 - Avnet ZUBoard 1CG
@@ -43,9 +45,9 @@
    ```
    vitis -s software/build_platform_and_app.py
    ```
-   會依 `prebuilt/zuboard_uart_led.xsa` 建立 Standalone 平台,並編譯 `software/helloworld.c` 為 `software/vitis_ws/hello_avnet/build/hello_avnet.elf`。若想直接用於 `demo_kit`,建置完成後複製取代 `prebuilt/hello_avnet.elf` 即可。
+   會依 `prebuilt/zuboard_uart_led.xsa` 建立 Standalone 平台,並編譯 `software/helloworld.c` 為 `software/vitis_ws_build/hello_avnet/build/hello_avnet.elf`。若想直接用於 `demo_kit`,建置完成後複製取代 `prebuilt/hello_avnet.elf` 即可。
 
-3. 若修改了硬體(例如改變 LED 閃爍頻率的 Verilog 或接腳),記得重新產生 `psu_init.tcl`:重新執行步驟 2 的軟體建置一次,會在 `software/vitis_ws/zuboard_platform/export/zuboard_platform/hw/sdt/psu_init.tcl` 產生新版本,複製取代 `prebuilt/psu_init.tcl`。
+3. 若修改了硬體(例如改變 LED 閃爍頻率的 Verilog 或接腳),記得重新產生 `psu_init.tcl`:重新執行步驟 2 的軟體建置一次,會在 `software/vitis_ws_build/zuboard_platform/export/zuboard_platform/hw/sdt/psu_init.tcl` 產生新版本,複製取代 `prebuilt/psu_init.tcl`。
 
 ## 修改印出的訊息
 
@@ -99,6 +101,7 @@
 - **`xsdb` 找不到 target / 燒錄失敗**:通常是板子的 USB 連線斷開了。檢查 micro-USB 是否確實插著、板子是否通電,必要時拔插重試。
 - **瀏覽器頁面按下連線後跳出的序列埠清單是空的**:確認 SW2 已切到 JTAG 模式且已完成步驟 2(燒錄程式),Windows 才會列出對應的 USB 序列埠。
 - **瀏覽器不支援 Web Serial API**:改用 Microsoft Edge 或 Google Chrome(Windows 內建 Edge 即符合需求),Firefox / Safari 目前不支援此 API。
+- **`vitis -s build_platform_and_app.py` 卡在版權訊息之後沒有反應**:在某些機器上 Vitis 2026.1 的背景服務(Vitis Server)啟動時會間歇性卡死,與 workspace 路徑、元件命名、`XILINX_PATH` 環境變數、Windows Defender 排除清單均無關,目前已知唯一有效的做法是直接關閉該行程(工作管理員找 `java.exe`)後重新執行,多試幾次。`build_platform_and_app.py` 已內建 `update_workspace()` 失敗回退機制,可處理「cannot recognize the workspace version」錯誤;若改用全新的 workspace 資料夾名稱仍遇到 `ALREADY_EXISTS` 或「error occurred while reading the project」,代表該元件名稱在這台機器上已有殘留登記,建議在腳本中把 `zuboard_platform` / `hello_avnet` 改成其他名稱再試。
 
 ## 參考文件
 
