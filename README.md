@@ -6,7 +6,7 @@
 - 透過 **PL(可程式邏輯)** 自製的計數器邏輯,交互閃爍 User RGB LED **D4 / D5**(約 1 秒切換一次),讓人一眼就能看出「燒錄前 / 燒錄後」的差異
 - 附一頁**免安裝、雙擊即用**的 HTML 展示頁(`demo_kit/ZUBoard_Demo.html`),用 Windows 內建的 Edge 瀏覽器(Web Serial API)即時顯示 UART 輸出,並內嵌系統架構方塊圖與技術組成說明,適合業務/FAE 在客戶現場快速展示
 
-> **⚠️ 已知狀態:** `prebuilt/hello_avnet.elf` 目前對應的訊息字串仍是舊版。`software/helloworld.c` 已經改成新訊息 **"Hi AMD Ross, what a wonderful world!"**,但因為某台建置機器上 Vitis 2026.1 的背景服務(Vitis Server)啟動時會間歇性卡死(成功率低於一成,已排除 workspace 路徑、元件命名、`XILINX_PATH` 環境變數、Windows Defender 等因素),尚未能重新編譯出對應的 `.elf`。等環境問題排除或改在別台機器建置後會補上;在那之前,若直接用 `prebuilt/` 展示,UART 印出的仍會是舊訊息。重新建置方式見下方「若要修改設計並重新建置」。
+> **目前訊息:** UART 印出 **"Hi AMD Ross, what a wonderful world!"**(`prebuilt/hello_avnet.elf` 已對應更新,並已在實機上驗證)。
 
 ## 硬體需求
 
@@ -51,7 +51,13 @@
 
 ## 修改印出的訊息
 
-編輯 `software/helloworld.c` 裡的 `xil_printf(...)` 字串,重新執行上面的 Vitis 建置步驟即可。
+編輯 `software/helloworld.c` 裡的 `xil_printf(...)` 字串。**只要平台(platform)已經建置過一次**(即執行過一次上面的 `build_platform_and_app.py`),之後只需重新編譯應用程式本身即可,不需要重建整個平台:
+
+```
+vitis -s software/build_app_only.py
+```
+
+這個指令會重用已經建置好的平台、只重新編譯 `hello_avnet` 這個 app,通常幾秒內完成,比重新執行 `build_platform_and_app.py`(會從頭建立平台、FSBL、PMUFW)快很多、也穩定很多(見下方疑難排解)。
 
 ## 修改 LED 閃爍頻率
 
@@ -67,7 +73,8 @@
 │   └── led_constraints.xdc     D4(Bank 44)、D5(Bank 65/66)接腳與電氣特性限制
 ├── software/                Vitis 應用程式來源
 │   ├── helloworld.c            主程式:設定 UART0 為 115200 並持續印出訊息
-│   └── build_platform_and_app.py  建立 Standalone 平台 + 應用程式(Vitis Python API)
+│   ├── build_platform_and_app.py  建立 Standalone 平台 + 應用程式(只需執行一次)
+│   └── build_app_only.py          只重新編譯 app(改訊息等日常維護用,見下方疑難排解)
 ├── scripts/
 │   ├── program_and_run.tcl     透過 JTAG(XSDB)燒錄並執行
 │   ├── capture_serial.ps1      擷取指定秒數的序列埠輸出(驗證用)
@@ -101,7 +108,9 @@
 - **`xsdb` 找不到 target / 燒錄失敗**:通常是板子的 USB 連線斷開了。檢查 micro-USB 是否確實插著、板子是否通電,必要時拔插重試。
 - **瀏覽器頁面按下連線後跳出的序列埠清單是空的**:確認 SW2 已切到 JTAG 模式且已完成步驟 2(燒錄程式),Windows 才會列出對應的 USB 序列埠。
 - **瀏覽器不支援 Web Serial API**:改用 Microsoft Edge 或 Google Chrome(Windows 內建 Edge 即符合需求),Firefox / Safari 目前不支援此 API。
-- **`vitis -s build_platform_and_app.py` 卡在版權訊息之後沒有反應**:在某些機器上 Vitis 2026.1 的背景服務(Vitis Server)啟動時會間歇性卡死,與 workspace 路徑、元件命名、`XILINX_PATH` 環境變數、Windows Defender 排除清單均無關,目前已知唯一有效的做法是直接關閉該行程(工作管理員找 `java.exe`)後重新執行,多試幾次。`build_platform_and_app.py` 已內建 `update_workspace()` 失敗回退機制,可處理「cannot recognize the workspace version」錯誤;若改用全新的 workspace 資料夾名稱仍遇到 `ALREADY_EXISTS` 或「error occurred while reading the project」,代表該元件名稱在這台機器上已有殘留登記,建議在腳本中把 `zuboard_platform` / `hello_avnet` 改成其他名稱再試。
+- **`vitis -s build_platform_and_app.py` 執行後長時間沒有反應、或印出 `Platform ... creation started` 後就沒有下文**:根據實測,這並不是單純的「卡住」,而是 Vitis Server 背景服務在執行「建立平台」(含 FSBL、PMUFW 編譯等較重的步驟)過程中**當掉**(父行程 `java.exe` 的 CPU 使用率因此看起來幾乎沒有變化,因為實際編譯工作是在子行程中進行);等到 server 行程真的中斷後,後續的 RPC 呼叫才會印出 `ConnectEx: Connection refused` 之類的錯誤。這個問題與 workspace 路徑、元件命名、`XILINX_PATH` 環境變數、Windows Defender 排除清單均無關,實測在同一台機器上可能連續發生十幾二十次。
+  - **已知可靠的解法:** 平台只需成功建置「一次」。一旦 `software/vitis_ws_build/zuboard_platform` 底下已經有建置成功的平台(`zuboard_platform.xpfm` 存在),之後改用 `vitis -s software/build_app_only.py`(只重新編譯 app,不重建平台)就不會再觸發這個當機問題,非常穩定。
+  - 若平台本身真的需要重建(例如第一次建置、或修改了硬體設計),且持續當機:可嘗試關閉所有殘留的 `java.exe` 行程、刪除 `software/vitis_ws_build` 後重試;多次重試通常最終會成功一次,之後就可以改用 `build_app_only.py` 維護。
 
 ## 參考文件
 
