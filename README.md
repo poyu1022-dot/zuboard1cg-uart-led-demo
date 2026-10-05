@@ -8,6 +8,48 @@
 
 > **目前訊息:** UART 印出 **"Hi AMD Ross, what a wonderful world!"**(`prebuilt/hello_avnet.elf` 已對應更新,並已在實機上驗證)。
 
+## 攜帶到其他電腦重現(懶人包)
+
+整個 repository 只有約 **3.5 MB**,直接把整個資料夾複製走(USB 隨身碟、雲端硬碟、或 `git clone`皆可)即可,不需要另外挑檔案、也不依賴現場網路。
+
+### 1. 需要攜帶的檔案/資料夾
+
+| 資料夾 | 大小 | 必要性 | 用途 |
+|---|---|---|---|
+| `prebuilt/` | ~3.5 MB | ✅ 必要 | 已建置好的 bitstream(`.bit`)、應用程式(`.elf`)、硬體描述檔(`.xsa`)、PS 初始化腳本(`psu_init.tcl`)——**直接展示只需要這個資料夾**,不必重新編譯 |
+| `demo_kit/` | <0.1 MB | ✅ 必要 | 現場展示用的一鍵燒錄 `.bat`、即時 UART 顯示網頁 |
+| `scripts/` | <0.1 MB | ✅ 必要 | `program_and_run.tcl`(實際執行燒錄的 XSDB 腳本,`demo_kit` 的 `.bat` 會呼叫它)、序列埠監看工具 |
+| `hardware/` | <0.1 MB | 只有要修改/重建硬體設計才需要 | Vivado 專案原始碼(Tcl + Verilog + 接腳限制) |
+| `software/` | <0.1 MB | 只有要修改/重建程式才需要 | Vitis 應用程式原始碼(C + 建置腳本) |
+| `README.md`、`.gitignore` | - | 建議一起帶 | 說明文件 |
+
+**最簡單的做法:整份資料夾一起帶走就好**,上面的區分只是讓您知道「如果只是要展示,其實只需要 `prebuilt/`、`demo_kit/`、`scripts/` 這三個資料夾」。
+
+### 2. 目標電腦需要預先安裝的軟體
+
+依目的分兩種情境:
+
+**(A) 只要重現展示結果(燒錄 + 看 UART 輸出 + 看架構圖),不修改設計 —— 最快最簡單**
+
+- Windows 10 / 11
+- **AMD Vitis 2026.1**(內含 `xsdb.bat` 與 `hw_server`,是透過 JTAG 燒錄所需的工具;**不需要**額外安裝 Vivado)
+  - 安裝過程請確認有裝好「Cable Drivers」(USB-JTAG/UART 傳輸線驅動),這樣 ZUBoard 的 FTDI FT2232H 晶片才能被 Windows 正確辨識為序列埠 —— 我們先前就是因為這個驅動沒跑起來而卡過關
+- Microsoft Edge 或 Google Chrome(Windows 內建的 Edge 即符合需求,用來開啟 `demo_kit/ZUBoard_Demo.html` 即時顯示 UART 輸出與架構圖)
+- **不需要**:Git、Vivado、Python(所有腳本都是用 Windows/Vitis 內建工具直接執行,免額外安裝)
+
+**(B) 想要修改硬體設計(LED 邏輯、接腳等)或重新產生 bitstream —— 需要完整開發環境**
+
+- 上面 (A) 的所有項目,再加上:
+- **AMD Vivado Design Suite 2026.1**(建議與 Vitis 版本一致,避免 `.xsa` 相容性問題;兩者可透過 AMD 統一安裝程式一起安裝)
+- (選用)Git for Windows + GitHub CLI(`gh`)—— 只有想把修改推回 GitHub 才需要
+
+### 3. 到新電腦後的操作步驟
+
+1. 複製 / 解壓縮整個 repo 資料夾到新電腦
+2. 打開 `demo_kit/1_Program_And_Run.bat` 與 `demo_kit/2_Open_Block_Design.bat`,把開頭的 `VITIS_BIN=` / `VIVADO_BIN=` 改成新電腦上實際的安裝路徑(例如 `C:\Xilinx\2026.1\Vitis`)
+3. 接上 ZUBoard 1CG:SW2 撥到 JTAG 模式(`ON-ON-ON-ON`)→ 接 micro-USB(J16)→ 接 15V 電源(J15)→ 按 SW7 開機
+4. 依照 `demo_kit/ZUBoard_Demo.html` 頁面上的步驟操作即可(雙擊 `1_Program_And_Run.bat` 燒錄 → 雙擊 `ZUBoard_Demo.html` 看即時輸出)
+
 ## 硬體需求
 
 - Avnet ZUBoard 1CG
@@ -15,7 +57,7 @@
 - USB-C 15V/3A 電源供應器(接 J15)
 - Windows 電腦一台
 
-## 快速開始(使用 `prebuilt/` 內已建置好的檔案,不需安裝 Vivado/Vitis)
+## 快速開始(使用 `prebuilt/` 內已建置好的檔案,只需安裝 Vitis,不需安裝 Vivado)
 
 1. **硬體準備**
    - BOOT MODE 撥動開關 **SW2** 設定為 JTAG 模式:`ON-ON-ON-ON`
